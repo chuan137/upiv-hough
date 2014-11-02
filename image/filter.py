@@ -31,3 +31,13 @@ def sample_importance(img, alpha, r=1):
         else:
             f0[i,j] = 0
     return f0     
+
+def threhold_high(img, alpha):
+    res = numpy.copy(img)
+    res[res<alpha*img.max()] = 0
+    return res
+
+def threhold(img, alpha, beta):
+    res = numpy.copy(img)
+    res[(res<alpha*img.max()) | (res>beta*img.max())] = 0
+    return res

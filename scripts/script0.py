@@ -9,7 +9,7 @@ import image.tifffile as tif
 import image.filter as img_filter
 import image.hough as hough
 
-f0 = tif.imread('../samples/abgedeckt1_geschlossen.tif', key=0)
+f0 = tif.imread('t.tif')
 f0 = f0.transpose(1,2,0)
 f0 = img_as_float(f0)
 f0 = color.rgb2gray(f0)
