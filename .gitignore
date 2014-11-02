@@ -1,0 +1,4 @@
+.*DS_Store
+samples
+*.egg-info
+*/res_dump
