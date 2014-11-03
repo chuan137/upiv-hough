@@ -28,3 +28,15 @@ def neighbour(img, y0, x0, r):
     res = np.copy(img[y1:y2, x1:x2])
     return res
 
+def check_pts(y0, x0, l):
+    """check if (y0, x0) is in list
+        allow +1/-1 error 
+    """
+    check = []
+    for pt in l:
+        if abs(pt[0]-y0) <=1 and abs(pt[1]-x0) <=1:
+            check.append(True)
+        else:
+            check.append(False)
+    return np.any(check)
+

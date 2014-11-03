@@ -19,7 +19,7 @@ def HT(img, rho):
                     count(vote, ri, a, y - np.floor(h+1))
                     count(vote, ri, a, y + np.floor(h+1))
     return vote
-def fuzzy(votes, a=1.0, sigma=4, R=2):
+def fuzzy(votes, a=2.0, sigma=1.5, R=2):
     def kernel(k,sigma,R=2):
         kern = np.zeros(2*R+1)
         for d in range(0,R+1):
@@ -124,29 +124,35 @@ def find_ring(fv, alpha = 0.9):
     return r, y, x
 
 def rm_ring(fv, f0, y0, x0, r0, rmin, rmax):
+   # hough transfrom of the masked image
+    #_, _fv = fuzzyHT(fmask, rmin, rmax)
+    #fv_sub = fv - _fv
+    #print pk[0]
+    #print flag
+    return fmask
+
+
+def mask_ring(fv, f0, y0, x0, r0, rmin):
     import skimage.draw as draw
     _fvr = np.sum(np.sum(fv[:,y0-1:y0+2,x0-1:x0+2], axis=1), axis=1)
     pk = np.where(np.r_[False, _fvr[1:] > _fvr[:-1]] & np.r_[_fvr[:-1] > _fvr[1:], False])
     xx = range(len(_fvr))
     flag = np.zeros(len(_fvr), dtype='uint8')
+    coeffs = []
     for p in pk[0]:
+        if p > 2*r0:
+            break
         yy = np.copy(_fvr)
         yy[:p-3] = 0; yy[p+4:] = 0
-        cc = fit_gauss(xx, yy, _fvr[p], p, 3)
+        cc = fit_gauss(xx, yy, _fvr[p], p, 1)
         flag[np.floor(cc[1]-cc[2]):np.ceil(cc[1]+cc[2])] = 1
-        print cc
+        coeffs.append(cc)
     # create image mask
     mask = np.zeros(f0.shape, dtype='uint8')
-    for _i, _f in enumerate(flag):
+    for _r, _f in enumerate(flag):
         if _f == 1:
-             _y, _x = draw.circle_perimeter(y0, x0, _i, 'andres')
+             _y, _x = draw.circle_perimeter(y0, x0, _r+rmin, 'andres')
              mask[_y, _x] = 1
     fmask = np.logical_and(f0, mask)
-    # hough transfrom of the masked image
-    _, _fv = fuzzyHT(fmask, rmin, rmax)
-    fv_sub = fv - _fv
-    #print pk[0]
-    #print flag
-    return fv_sub
-
-
+    return fmask, coeffs
+  

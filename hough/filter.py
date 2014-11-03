@@ -37,7 +37,10 @@ def threhold_high(img, alpha):
     res[res<alpha*img.max()] = 0
     return res
 
-def threhold(img, alpha, beta):
+def threhold(img, alpha, beta, mode='abs'):
     res = numpy.copy(img)
-    res[(res<alpha*img.max()) | (res>beta*img.max())] = 0
+    if mode == 'abs':
+        res[(res<alpha) | (res>beta)] = 0
+    else:
+        res[(res<alpha*img.max()) | (res>beta*img.max())] = 0
     return res

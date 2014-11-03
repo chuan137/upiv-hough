@@ -26,11 +26,8 @@ f1 = img_as_float(f1)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Settings
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-bmin = 0.12
+bmin = 0.13
 bmax = 0.20
-rmin = 40
-rmax = 50
-alpha = 0.5
 
 
 # detek blob
@@ -39,55 +36,26 @@ for b in blobs:
     b[2] *= 1.2
     f1[b[0]-b[2]:b[0]+b[2]+1, b[1]-b[2]:b[1]+b[2]+1] = f1.mean()
 
-# downsize
 # threholding filter
-f2 = rescale(f1, 0.5)
-f3 = ifilter.threhold(f2, bmin, bmax)
-f4 = ifilter.sample_importance(f3, alpha)
+f2 = ifilter.threhold(f1, bmin, bmax)
+
+# downsize
+f2 = rescale(f2, 0.5)
 
 # hough transform
-v = hough_circle(f4, arange(rmin, rmax))
+v = hough_circle(f2, arange(2, 50))
 fv = hough.fuzzy(v)
 
-for i in range(10):
+for i in range(1):
     # find candidate
     r0, y0, x0 = hough.find_ring(fv)
-    print y0, x0, r0,
-
-    # check blob
     c0 = util.neighbour(fv[r0-1], y0, x0, 20)
     c1 = util.neighbour(fv[r0], y0, x0, 20)
     c2 = util.neighbour(fv[r0+1], y0, x0, 20)
+
     b1 = blob_doh(c1, max_sigma=10, num_sigma=20)
+    check = util.check_pts(20,20,b1)
 
-    if b1.size == 0:
-        print b1
-        fv[r0, y0-r0:y0+r0+1, x0-r0:x0+r0+1] *= 0.5
-        continue
-    else:
-        chk1 = b1 - [20, 20, 0]
-        check = chk1[:,0]**2 + chk1[:,1]**2
-    
-    # rm ring
-    # m is the mask of the found ring
-    # c is the coefficients fitted to the gauss function
-    # _fv is the fuzzied votes from mask
-    # which is then removed from fv
-    if check.min() <= 2:
-        m, c = hough.mask_ring(fv, f4, y0, x0, r0, rmin)
-        _v = hough_circle(m, arange(rmin, rmax))
-        _fv = hough.fuzzy(_v)
-        fv = fv - _fv
-    else:
-        _y, _x, _r =  chk1[check==check.min()][0]
-        _y += y0; _x += x0
-        fv[r0, _y-_r:_y+_r+1, _x-_r:_x+_r+1] *= 0.5
-        print _y, _x, _r
-
-
-    # print the found ring
-    if check.min() <= 2:
-        print 'YES!'
     
 
 
