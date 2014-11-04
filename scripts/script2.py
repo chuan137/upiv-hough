@@ -13,6 +13,7 @@ from skimage.transform import rescale, hough_circle
 from skimage.segmentation import *
 from skimage import img_as_float
 from skimage.feature import blob_dog, blob_log, blob_doh
+from skimage import exposure
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -30,7 +31,7 @@ bmin = 0.12
 bmax = 0.20
 rmin = 2
 rmax = 65
-alpha = 0.5
+alpha = 0.9
 
 
 # detek very bright blob and remove them
@@ -40,6 +41,37 @@ for b in blobs:
     f1[b[0]-b[2]:b[0]+b[2]+1, b[1]-b[2]:b[1]+b[2]+1] = f1.mean()
 
 
+def fun1():
+    ss = 20 
+    for _i in range(0,1000,ss):
+        for _j in range(0, 1000, ss):
+            _f = f1[_i:_i+ss, _j:_j+ss]
+            _h = histogram(_f, bins=100)
+            print _h[0].max()
+            pk_half_x = where(_h[0]>0.5*_h[0].max())[0][-1]
+            pk_fourth_x = where(_h[0]>0.10*_h[0].max())[0][-1]
+            pk_half = _h[1][pk_half_x]
+            pk_fourth = _h[1][pk_fourth_x]
+
+            
+            #f1[_i:_i+ss, _j:_j+ss] = ifilter.threhold(_f, pk_half, pk_fourth)
+            _f = ifilter.threhold(_f, pk_half, pk_fourth)
+            _f = ifilter.sample_importance(_f, 0.8)
+            f1[_i:_i+ss, _j:_j+ss] = _f
+
+        #f1[_i:_i+ss, _j:_j+ss] = exposure.rescale_intensity(_f, in_range=(pk_half, pk_fourth))
+
+
+
+        #pk = where(hist[0]==hist[0].max())[0][0]
+        #pk_half = where(hist[0]>*pk)[0].max()
+
+        #print hist[1][pk], hist[1][pk_half],
+        #print pk_half, pk_fourth
+
+
+
+
 # downsize
 # threholding filter
 # sample importance
@@ -47,9 +79,15 @@ f2 = rescale(f1, 0.5)
 f3 = ifilter.threhold(f2, bmin, bmax)
 f4 = ifilter.sample_importance(f3, alpha)
 
+#f4 = ifilter.sample_importance(f3, alpha)
+#for i in range(10):
+#    print i
+#    f4 = ifilter.sample_importance(f4, 0.95)
+#f3 = ifilter.sample_importance(f3, alpha)
+
 
 # hough transform
-if False:
+if True:
     votes = hough_circle(f3, arange(0, rmax+1))
     fuzzy_votes = hough.fuzzy(votes)
     
@@ -96,108 +134,5 @@ for i in range(1):
         fv[fv<0] = 0
     else:
         fv[smin+r0-1:smin+r0+2, y0-1:y0+2, x0-1:x0+2] = 0
-
-
-
-
-
-#for i in range(10):
-    ## find candidate
-    #r0, y0, x0 = hough.find_ring(fv)
-    #print y0, x0, r0,
-
-    ## check blob
-    #c0 = util.neighbour(fv[r0-1], y0, x0, 20)
-    #c1 = util.neighbour(fv[r0], y0, x0, 20)
-    #c2 = util.neighbour(fv[r0+1], y0, x0, 20)
-    #b1 = blob_doh(c1, max_sigma=10, num_sigma=20)
-
-    #if b1.size == 0:
-        #print b1
-        #fv[r0, y0-r0:y0+r0+1, x0-r0:x0+r0+1] *= 0.5
-        #continue
-    #else:
-        #chk1 = b1 - [20, 20, 0]
-        #check = chk1[:,0]**2 + chk1[:,1]**2
-    
-    ## rm ring
-    ## m is the mask of the found ring
-    ## c is the coefficients fitted to the gauss function
-    ## _fv is the fuzzied votes from mask
-    ## which is then removed from fv
-    #if check.min() <= 2:
-        #m, c = hough.mask_ring(fv, f4, y0, x0, r0, rmin)
-        #_v = hough_circle(m, arange(rmin, rmax))
-        #_fv = hough.fuzzy(_v)
-        #fv = fv - _fv
-    #else:
-        #_y, _x, _r =  chk1[check==check.min()][0]
-        #_y += y0; _x += x0
-        #fv[r0, _y-_r:_y+_r+1, _x-_r:_x+_r+1] *= 0.5
-        #print _y, _x, _r
-
-
-    ## print the found ring
-    #if check.min() <= 2:
-        #print 'YES!'
-    
-
-
-
-
-
-def func():
-    # crop image
-    f1 = copy(f0[100:1100, 50:1050])
-    f1[ (f1 < bmin) | (f1 >= bmax) ] = 0
-
-
-    crops = []
-    cropsize = 200
-    for i in range(0,1000,cropsize):
-        for j in range(0,1000,cropsize):
-            crops.append(f1[i:i+cropsize, j:j+cropsize])
-    # image crops are stored in crops[]
-    # corpsize can be defined
-
-
-    f2 = copy(crops[18])
-    if True:
-        f3 = img_filter.sample_importance(f2, 0.9)
-    else:
-        f3 = copy(f2)
-
-
-
-
-    v, fv = hough.fuzzyHT(f3, 5, 45)
-
-    # maxima?
-    r, y0, x0 = where(fv==fv.max())
-    r = r[0] + 5
-    x0 = x0[0]
-    y0 = y0[0]
-
-    # check circle with azimuth
-    A, r0, dr, _, h = hough.ring(f2, y0, x0, r)
-    dr = int(round(dr))
-
-
-
-
-
-    # create mask
-    f4 = zeros(f2.shape)
-    for ir in range(r-dr, r+dr+1):
-        rr, cc = draw.circle_perimeter(y0, x0, ir, 'andres')
-        f4[rr, cc] = 1
-    f5 = zeros(f2.shape)
-    f5[where(logical_and(f3, f4))] = 1
-    v5, fv5 = hough.fuzzyHT(f5, range(5, 40))
-
-
-    fv_sub = fv-fv5
-    for i, ffv in enumerate(fv_sub): 
-        imsave('res_dump/fv-sub-%d.png' % i, ffv)
 
 

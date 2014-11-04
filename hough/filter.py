@@ -15,7 +15,7 @@ def pixel_neighbour_mean(img, i, j, r):
     return psum/norm
 
 
-def sample_importance(img, alpha, r=1):
+def sample_importance(img, alpha, r=1, rn=1):
     """ return binary image, importance sampled """
     m  = img[img>0].mean()
     f0 = numpy.copy(img)
@@ -25,7 +25,12 @@ def sample_importance(img, alpha, r=1):
         # .. maximum alpha is 1, when all pixel kept
         # .. w is the mean of neighbouring pixels, normalized by 
         #       mean value of all nonzero pixels of [img]
-        w = pixel_neighbour_mean(img,i,j,r)/m
+        #w = pixel_neighbour_mean(img,i,j,r)/m
+        w = pixel_neighbour_mean(img,i,j,r)/pixel_neighbour_mean(img,i,j,r+rn)
+        if w > 1:
+            w = w * 1.2
+        else:
+            w = 0.8 * w 
         if ran*w > 1 - alpha:
             f0[i,j] = 1
         else:

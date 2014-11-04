@@ -153,6 +153,42 @@ def mask_ring(fv, f0, y0, x0, r0, rmin):
         if _f == 1:
              _y, _x = draw.circle_perimeter(y0, x0, _r+rmin, 'andres')
              mask[_y, _x] = 1
-    fmask = np.logical_and(f0, mask)
-    return fmask, coeffs
+    #fmask = np.logical_and(f0, mask)
+    return mask, coeffs
   
+def gen_ring_mask(votes, img, y0, x0, r0):
+    import skimage.draw as draw
+    #rad = np.sum(np.sum(votes[:,y0-1:y0+2,x0-1:x0+2], axis=1), axis=1)
+    rad = votes[:, y0, x0]
+    peaks = np.where(np.r_[False, rad[1:] > rad[:-1]] 
+                & np.r_[rad[:-1] > rad[1:], False]
+                & (rad >= 0.2*rad.max()))
+    peaks = peaks[0]
+    coeffs = []
+    xx = range(len(rad))
+    flag = np.zeros(len(rad), dtype='uint8')
+
+    # fit guassian peak
+    for p in peaks:
+        if p > 1.3*r0:
+            break
+        yy = np.copy(rad)
+        yy[:p-3] = 0
+        yy[p+4:] = 0
+        cc = fit_gauss(xx, yy, rad[p], p, 2)
+        flag[np.floor(cc[1]-cc[2]):np.ceil(cc[1]+cc[2])+1] = 1
+        coeffs.append(cc)
+    #print flag, coeffs
+
+    # create image mask
+    mask = np.zeros(img.shape, dtype='uint8')
+    for _r, _f in enumerate(flag):
+        if _f == 1:
+             _y, _x = draw.circle_perimeter(y0, x0, _r, 'andres')
+             mask[_y, _x] = 1
+    return mask
+
+def filter_mask(img, mask):
+    f = np.logical_and(img, mask)
+    f.dtype = 'uint8'
+    return f
