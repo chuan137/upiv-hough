@@ -1,4 +1,6 @@
 import numpy as np
+import image.util as util
+from skimage.feature import blob_dog, blob_log, blob_doh, hessian_matrix_det, hessian_matrix
 
 def HT(img, rho):
     shape = img.shape
@@ -192,3 +194,50 @@ def filter_mask(img, mask):
     f = np.logical_and(img, mask)
     f.dtype = 'uint8'
     return f
+
+def find_blobs(img):
+    img = np.copy(img)
+    #img[img<0.2*img.max()] = 0
+    blobs = blob_doh(img, max_sigma=10)
+    true_blobs = []
+    for y0, x0, b0 in blobs:
+        #print img[y0,x0]
+        #print util.neighbour(img, y0, x0, b0)
+        #print "---------------------------------"
+        #print
+        if img[y0,x0] > util.neighbour(img,y0,x0,b0).mean() and b0 >= 2:
+            true_blobs.append([y0,x0,b0])
+    return true_blobs, blobs, img
+        
+def find_blobs_hessian(img):
+    img = np.copy(img)
+    blobs = blob_doh(img, max_sigma=10, num_sigma=10)
+    true_blobs = []
+    for y0, x0, b0 in blobs:
+        p0 = util.neighbour(img, y0, x0, 1)
+        y, x  = np.unravel_index(p0.argmax(), p0.shape)
+        y0 += y - 1
+        x0 += x - 1
+
+        p0 = util.neighbour(img, y0, x0, 2*b0)
+
+        if True:
+            # method 1 (hessian diagonal)
+            hs0, hs1, hs2 = hessian_matrix(p0, 0.5*b0)
+            q0 = 0.5 *(hs0 + hs2)
+            #print b0, q0[2*b0, 2*b0], util.neighbour(q0, 2*b0,2*b0,b0).max()
+            #print img[y0,x0], util.neighbour(img,y0,x0,b0).mean()
+            if b0 >= 2 \
+                and b0 <= 8 \
+                and q0[2*b0,2*b0] > 0.95*util.neighbour(q0,2*b0,2*b0,b0).max():
+                    true_blobs.append([y0,x0,b0])
+        else:
+            # method 2 (hessian determinant)
+            q0 = hessian_matrix_det(p0, b0)
+            print b0, q0[2*b0, 2*b0], util.neighbour(q0, 2*b0,2*b0,b0).max()
+            if b0 >= 2 \
+                and b0 <= 8 \
+                and q0[2*b0,2*b0] > 0.8*util.neighbour(q0,2*b0,2*b0,b0).max():
+                    true_blobs.append([y0, x0, b0])
+    return true_blobs, blobs
+
