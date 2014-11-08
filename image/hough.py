@@ -1,5 +1,6 @@
 import numpy as np
 import image.util as util
+import image.filter as ifilter
 from skimage.feature import blob_dog, blob_log, blob_doh, hessian_matrix_det, hessian_matrix
 
 def HT(img, rho):
@@ -21,15 +22,17 @@ def HT(img, rho):
                     count(vote, ri, a, y - np.floor(h+1))
                     count(vote, ri, a, y + np.floor(h+1))
     return vote
-def fuzzy(votes, a=2.0, sigma=1.5, R=2):
-    def kernel(k,sigma,R=2):
-        kern = np.zeros(2*R+1)
-        for d in range(0,R+1):
-            value = k * np.exp(-d**2/sigma**2)
-            kern[R+d] = value
-            kern[R-d] = value
-        return kern
-    kern = kernel(a, sigma, R)
+
+def kernel_g(k,sigma=1,R=2):
+    kern = np.zeros(2*R+1)
+    for d in range(0,R+1):
+        value = k * np.exp(-d**2/(2.0*sigma**2))
+        kern[R+d] = value
+        kern[R-d] = value
+    return kern
+
+def fuzzy(votes, a=2.0, sigma=1, R=2):
+    kern = kernel_g(a, sigma, R)
     fv = np.zeros(votes.shape)
     xx, yy = np.mgrid[0:fv.shape[1], 0:fv.shape[2]]
     for i, j in np.vstack([xx.ravel(), yy.ravel()]).T:
@@ -208,25 +211,43 @@ def find_blobs(img):
         if img[y0,x0] > util.neighbour(img,y0,x0,b0).mean() and b0 >= 2:
             true_blobs.append([y0,x0,b0])
     return true_blobs, blobs, img
+
+def test_blob(img, y0, x0, size=40):
+    """ Test if blob exist at (y0, x0) in image
+    size: inspecting region
+    """
+    img0 = np.zeros((img.shape[0]+2*size, img.shape[1]+2*size))
+    img0[size:size+img.shape[0], size:size+img.shape[1]] = img
+
+    p0 = util.neighbour(img0, y0+size, x0+size, size)
+    blobs = blob_doh(p0, max_sigma=10)
+    for _y, _x, _b in blobs:
+        if _b > 8: continue
+        if (_y-size)**2 + (_x-size)**2 <= 4:
+            return True
+    return False
         
 def find_blobs_hessian(img):
-    img = np.copy(img)
-    blobs = blob_doh(img, max_sigma=10, num_sigma=10)
+    size = 20
+    img0 = np.zeros((img.shape[0]+ 2*size, img.shape[1]+ 2*size))
+    img0[size:size+img.shape[0], size:size+img.shape[1]] = img
+
+    blobs = blob_doh(img0, max_sigma=10, num_sigma=10)
+
     true_blobs = []
     for y0, x0, b0 in blobs:
-        p0 = util.neighbour(img, y0, x0, 1)
+        
+        p0 = util.neighbour(img0, y0, x0, 1)
         y, x  = np.unravel_index(p0.argmax(), p0.shape)
         y0 += y - 1
         x0 += x - 1
 
-        p0 = util.neighbour(img, y0, x0, 2*b0)
+        p0 = util.neighbour(img0, y0, x0, 2*b0)
 
         if True:
             # method 1 (hessian diagonal)
             hs0, hs1, hs2 = hessian_matrix(p0, 0.5*b0)
             q0 = 0.5 *(hs0 + hs2)
-            #print b0, q0[2*b0, 2*b0], util.neighbour(q0, 2*b0,2*b0,b0).max()
-            #print img[y0,x0], util.neighbour(img,y0,x0,b0).mean()
             if b0 >= 2 \
                 and b0 <= 8 \
                 and q0[2*b0,2*b0] > 0.95*util.neighbour(q0,2*b0,2*b0,b0).max():
@@ -239,5 +260,9 @@ def find_blobs_hessian(img):
                 and b0 <= 8 \
                 and q0[2*b0,2*b0] > 0.8*util.neighbour(q0,2*b0,2*b0,b0).max():
                     true_blobs.append([y0, x0, b0])
+    if len(true_blobs) > 0:
+        true_blobs = np.array(true_blobs) - [size, size, 0]
+    if len(blobs) > 0:
+        blobs = blobs - [size, size, 0]
     return true_blobs, blobs
 

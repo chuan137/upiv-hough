@@ -3,3 +3,4 @@ samples
 *.egg-info
 */res_dump
 *.pyc
+*.swp

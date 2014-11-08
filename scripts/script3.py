@@ -29,22 +29,13 @@ f1 = img_as_float(f1)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Settings
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-if True:
-    # smaller rings
-    ds_ratio = 1
-    rmin = 30
-    rmax = 60
-    bmin = 0.12
-    bmax = 0.20
-    alpha = 1.0
-else:
-    # larger rings
-    ds_ratio = 2
-    bmin = 0.12
-    bmax = 0.20
-    rmin = 30
-    rmax = 65
-    alpha = 1.0
+ds_ratio = 1
+bsize = 200
+rmin = 10
+rmax = 30
+bmin = 0.12
+bmax = 0.20
+alpha = 1.0
 
 
 
@@ -61,26 +52,35 @@ if True:
 # and sample importance filter
 
 
-# hough transform
-if True:
-    votes = hough_circle(f4, arange(rmax+1))
+#votes = hough_circle(f4, arange(rmax+1))
+#fvotes = hough.fuzzy(votes)
+
+yy, xx = mgrid[0:1000:bsize, 0:1000:bsize]
+for y, x in zip(yy.flatten(), xx.flatten()):
+    if 
+    img = f4[y:y+bsize, x:x+bsize]
+    votes = hough_circle(img, arange(rmax+1))
     fvotes = hough.fuzzy(votes)
-vv = copy(fvotes)
+
+    for r in range(rmax, rmin, -1):
+        blobs = hough.find_blobs_hessian(fvotes[r])
+        print r, blobs[0]
 
 
-# find blobs
-blobs = []
-for r in range(len(vv)-2,rmin-1,-2):
-    tb, b = hough.find_blobs_hessian(vv[r])
-    for y0, x0, b0 in tb:
-        if hough.test_blob(vv[r-1], y0, x0) or \
-            hough.test_blob(vv[r+1], y0, x0):
-                blobs.append([y0, x0, r, b0])
-    print r
 
-# mask
-mask = zeros(f4.shape)
-for b in blobs:
-    xx, yy = circle_perimeter(b[0], b[1], b[2])
-    mask[xx, yy] = 1
+## find blobs
+#blobs = []
+#for r in range(len(vv)-1,rmin-1,-2):
+    #tb, b = hough.find_blobs_hessian(vv[r])
+    #for y0, x0, b0 in tb:
+        #if hough.test_blob(vv[r-1], y0, x0) or \
+            #hough.test_blob(vv[r+1], y0, x0):
+                #blobs.append([y0, x0, r, b0])
+    #print r
+
+## mask
+#mask = zeros(f4.shape)
+#for b in blobs:
+    #xx, yy = circle_perimeter(b[0], b[1], b[2])
+    #mask[xx, yy] = 1
 
